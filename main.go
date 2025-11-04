@@ -3,16 +3,17 @@ package main
 import (
 	"net/http"
 
-	"github.com/Dryluigi/crud-employee-go/database"
-	"github.com/Dryluigi/crud-employee-go/routes"
+	"go-crud-tk/controllers/pasiencontroller"
 )
 
 func main() {
-	db := database.InitDatabase()
+	http.HandleFunc("/", pasiencontroller.Index)
+	http.HandleFunc("/pasien", pasiencontroller.Index)
+	http.HandleFunc("/pasien/index", pasiencontroller.Index)
 
-	server := http.NewServeMux()
+	http.HandleFunc("/pasien/add", pasiencontroller.Add)
+	http.HandleFunc("/pasien/edit", pasiencontroller.Edit)
+	http.HandleFunc("/pasien/delete", pasiencontroller.Delete)
 
-	routes.MapRoutes(server, db)
-
-	http.ListenAndServe(":8080", server)
+	http.ListenAndServe(":3000", nil)
 }

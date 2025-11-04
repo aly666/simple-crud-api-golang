@@ -1,47 +1,99 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simple-api
-  labels:
-    app: simple-api
+  name: mysql
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: simple-api
+      app: mysql
+  replicas: 1
   template:
     metadata:
       labels:
-        app: simple-api
+        app: mysql
     spec:
       containers:
-        - name: simple-api
-          image: aly666/simple-crud-go    # image lokal
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 2
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: password
+        - name: MYSQL_DATABASE
+          value: go_crud
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: simple-api
+  name: mysql-service
 spec:
   selector:
-    app: simple-api
+    app: mysql
   ports:
-    - port: 8080
-      targetPort: 8080
-      protocol: TCP
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-pasien-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-pasien-app
+  template:
+    metadata:
+      labels:
+        app: go-pasien-app
+    spec:
+      containers:
+      - name: go-pasien-app
+        image: aly666/simple-crud-app
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_HOST
+          value: "mysql-service"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_USER
+          value: "root"
+        - name: DB_PASS
+          value: "password"
+        - name: DB_NAME
+          value: "go_crud"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-pasien-service
+spec:
+  selector:
+    app: go-pasien-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
 
